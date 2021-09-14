@@ -5,12 +5,14 @@
 #include <time.h>
 #include <errno.h>
 
+#ifndef WORKQUEUE_WINDOWS
+
 typedef struct workqueue_internal_handoff
 {
-    workqueue_job_t jobfcn;
+    int id;
+    workqueue_t *q;
     workqueue_job_io *io;
-    pthread_t *worker;
-    bool *done_ptr;
+    workqueue_job_t jobfcn;
     int timeout;
     pthread_cond_t *wakeup;
 } workqueue_internal_handoff;
@@ -67,7 +69,7 @@ void *workqueue_monitor_thread(void *_arg)
         dbprintlf(FATAL "Could not set timeout");
         goto exit;
     }
-    while((rc = pthread_create(arg->worker, NULL, &workqueue_worker_thread, arg)) == EAGAIN);
+    while((rc = pthread_create(&(arg->q->worker[arg->id]), NULL, &workqueue_worker_thread, arg)) == EAGAIN);
     if (rc)
     {
         dbprintlf(FATAL "Could not create worker thread: %d", rc);
@@ -76,13 +78,13 @@ void *workqueue_monitor_thread(void *_arg)
     rc = pthread_cond_timedwait(&wakeup, &wakelock, &ts);
     if (rc == ETIMEDOUT)
     {
-        pthread_cancel(*(arg->worker));
+        pthread_cancel(arg->q->worker[arg->id]);
     }
     else if (rc != 0) // other stuff
     {
         dbprintlf(FATAL "pthread_cond_timedwait returned %d", rc);
     }
-    rc = pthread_join(*(arg->worker), (void *) &ret);
+    rc = pthread_join(arg->q->worker[arg->id], (void *) &ret);
     if (rc == ESRCH)
     {
         dbprintlf(RED_BG "pthread_join: ESRCH");
@@ -103,7 +105,7 @@ void *workqueue_monitor_thread(void *_arg)
         dbprintlf(RED_FG "pthread_join: worker timed out");
     }
 exit:
-    *(arg->done_ptr) = true; // indicate done
+    arg->q->done[arg->id] = true; // indicate done
     pthread_exit(&ret);
 }
 
@@ -182,11 +184,11 @@ int InsertWithTimeout(workqueue_t *wq, workqueue_job_t jobfcn, workqueue_job_io 
         if (start_work == true) // empty process, can start here
         {
             workqueue_internal_handoff *handoff = &(handoffs[i]);
+            handoff->id = i;
+            handoff->q = wq;
             handoff->jobfcn = jobfcn;
-            handoff->done_ptr = &(wq->done[i]);
             handoff->io = io;
             handoff->timeout = timeout_ms;
-            handoff->worker = &(wq->worker[i]);
             int rc;
             while ((rc = pthread_create(&(wq->monitor[i]), &monitor_attr, &workqueue_monitor_thread, handoff)) == EAGAIN);
             if (rc == EINVAL || rc == EPERM)
@@ -199,3 +201,7 @@ int InsertWithTimeout(workqueue_t *wq, workqueue_job_t jobfcn, workqueue_job_io 
     }
     return retval;
 }
+
+#else
+
+#endif
