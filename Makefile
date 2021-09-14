@@ -1,15 +1,20 @@
 CC = gcc
+CXX = g++
 EDCFLAGS = -O2 -Wall $(CFLAGS)
+EDCXXFLAGS = -O2 -Wall $(CXXFLAGS)
 EDLDFLAGS = -lpthread
 
-COBJS = workqueue.o \
-		test.o
+COBJS = test.o
+CPPOBJS = workqueue.o
 
-all: $(COBJS)
-	$(CC) -o test.out $(COBJS) $(EDLDFLAGS)
+all: $(COBJS) $(CPPOBJS)
+	$(CC) -o test.out $(COBJS) $(CPPOBJS) $(EDLDFLAGS)
 
 %.o: %.c
 	$(CC) -o $@ -c $< $(EDCFLAGS)
+
+%.o: %.cpp
+	$(CXX) -o $@ -c $< $(EDCXXFLAGS)
 
 .PHONY: clean
 

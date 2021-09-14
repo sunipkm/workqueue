@@ -48,16 +48,15 @@ static int get_timeout(struct timespec *ts, int timeout_ms)
 
 void *workqueue_worker_thread(void *_arg)
 {
-    int status = 1;
     workqueue_internal_handoff *arg = (workqueue_internal_handoff *) _arg;
     (*(arg->jobfcn))(arg->io);
     pthread_cond_signal(arg->wakeup);
-    pthread_exit(&status);
+    pthread_exit((void *)1);
 }
 
 void *workqueue_monitor_thread(void *_arg)
 {
-    int ret;
+    void *ret;
     workqueue_internal_handoff *arg = (workqueue_internal_handoff *) _arg;
     struct timespec ts;
     pthread_cond_t wakeup = PTHREAD_COND_INITIALIZER;
@@ -84,7 +83,7 @@ void *workqueue_monitor_thread(void *_arg)
     {
         dbprintlf(FATAL "pthread_cond_timedwait returned %d", rc);
     }
-    rc = pthread_join(arg->q->worker[arg->id], (void *) &ret);
+    rc = pthread_join(arg->q->worker[arg->id], &ret);
     if (rc == ESRCH)
     {
         dbprintlf(RED_BG "pthread_join: ESRCH");
