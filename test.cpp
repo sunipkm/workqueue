@@ -1,7 +1,17 @@
 #include "workqueue.h"
 #include <signal.h>
 #include <stdlib.h>
+#ifndef WORKQUEUE_WINDOWS
 #include <unistd.h>
+#else
+int sleep(long sleeptime)
+{
+    if (sleeptime < 0)
+        Sleep(INFINITE);
+    Sleep(sleeptime * 1000);
+    return 1;
+}
+#endif
 
 volatile sig_atomic_t done = 0;
 void sighandler(int sig)
@@ -14,13 +24,15 @@ void testjob(workqueue_job_io *io)
     int in = *(int *)(io->input);
     *(int *)(io->output) = printf("Received input: %d\n", in);
     fflush(stdout);
-    sleep(1);
+    // sleep(1);
 }
 
 int main(void)
 {
     workqueue_t wq[1];
+#ifndef WORKQUEUE_WINDOWS
     srand(time(NULL));
+#endif
     signal(SIGINT, sighandler);
     InitWorkQueue(wq, 10);
     workqueue_job_io io[1];

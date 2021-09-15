@@ -15,26 +15,23 @@
 #if defined(WORKQUEUE_WINDOWS)
 #undef WORKQUEUE_WONDOWS
 #endif
+#include <stdbool.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define WORKQUEUE_WINDOWS // Windows
 #include <windows.h>
-#include <mfapi.h>
-#pragma comment(lib, "mfapi.lib")
 
 typedef struct
 {
-    int len = 0;
-    DWORD id = 0;
-    HANDLE *lock = nullptr;
-    bool *done = nullptr;
-    HANDLE *monitor = nullptr;
-    DWORD *monitor_id = nullptr;
+    int len;
+    DWORD id;
+    HANDLE *lock;
+    HANDLE monitor;
+    HANDLE *worker;
 } workqueue_t;
 
 #else // POSIX-compat
 #include <pthread.h>
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
