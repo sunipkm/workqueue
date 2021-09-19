@@ -1,7 +1,7 @@
 CC = gcc
 CXX = g++
 EDCFLAGS = -O2 -Wall $(CFLAGS)
-EDCXXFLAGS = -O2 -Wall $(CXXFLAGS)
+EDCXXFLAGS = -O2 -Wall -std=c++11 $(CXXFLAGS)
 EDLDFLAGS = -lpthread
 
 COBJS = test.o

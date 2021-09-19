@@ -24,8 +24,6 @@ typedef struct workqueue_internal_handoff
 
 static pthread_attr_t monitor_attr;
 
-static workqueue_internal_handoff *handoffs = NULL; // TODO: Remove this, restricts use of multiple work queues
-
 static int get_timeout(struct timespec *ts, int timeout_ms)
 {
     if (ts == NULL)
@@ -56,7 +54,7 @@ void *workqueue_worker_thread(void *_arg)
     workqueue_internal_handoff *arg = (workqueue_internal_handoff *)_arg;
     (*(arg->jobfcn))(arg->io);
     pthread_cond_signal(arg->wakeup);
-    pthread_exit((void *)1);
+    pthread_exit(NULL);
 }
 
 void *workqueue_monitor_thread(void *_arg)
@@ -83,6 +81,7 @@ void *workqueue_monitor_thread(void *_arg)
     rc = pthread_cond_timedwait(&wakeup, &wakelock, &ts);
     if (rc == ETIMEDOUT)
     {
+        dbprintlf(RED_BG "Job timed out");
         pthread_cancel(arg->q->worker[arg->id]);
     }
     else if (rc != 0) // other stuff
@@ -107,10 +106,11 @@ void *workqueue_monitor_thread(void *_arg)
     }
     if (ret == PTHREAD_CANCELED)
     {
-        dbprintlf(RED_FG "pthread_join: worker timed out");
+        dbprintlf(RED_FG "pthread_join: Job cancelled");
     }
 exit:
     arg->q->done[arg->id] = true; // indicate done
+    free(arg);
     pthread_exit(&ret);
 }
 
@@ -126,7 +126,6 @@ int InitWorkQueue(workqueue_t *wq, int numQueueLen)
     RETRY_WITH_COUNT((wq->monitor = (pthread_t *)malloc(wq->len * sizeof(pthread_t))) == NULL, retryCount);
     RETRY_WITH_COUNT((wq->worker = (pthread_t *)malloc(wq->len * sizeof(pthread_t))) == NULL, retryCount);
     RETRY_WITH_COUNT((wq->done = (bool *)malloc(wq->len * sizeof(bool))) == NULL, retryCount);
-    RETRY_WITH_COUNT((handoffs = (workqueue_internal_handoff *)malloc(wq->len * sizeof(workqueue_internal_handoff))) == NULL, retryCount);
 
     for (int i = 0; i < wq->len; i++)
     {
@@ -161,7 +160,6 @@ int ClearWorkQueue(workqueue_t *wq)
     free(wq->monitor);
     free(wq->worker);
     free(wq->done);
-    free(handoffs);
     wq->len = 0;
     return busy;
 }
@@ -189,7 +187,7 @@ int InsertWithTimeout(workqueue_t *wq, workqueue_job_t jobfcn, workqueue_job_io 
         }
         if (start_work == true) // empty process, can start here
         {
-            workqueue_internal_handoff *handoff = &(handoffs[i]);
+            workqueue_internal_handoff *handoff = (workqueue_internal_handoff *)malloc(sizeof(workqueue_internal_handoff));
             handoff->id = i;
             handoff->q = wq;
             handoff->jobfcn = jobfcn;
@@ -232,7 +230,7 @@ DWORD WINAPI workqueue_monitor_thread(LPVOID _arg)
     workqueue_handoff_t *arg = (workqueue_handoff_t *)_arg;
     // try to lock
     int i;
-    for (i = 0; ; i = (i + 1) % (arg->wq->len))
+    for (i = 0;; i = (i + 1) % (arg->wq->len))
     {
         DWORD lockret = WaitForSingleObject(arg->wq->lock[i], 0);
         if (lockret == WAIT_OBJECT_0)
@@ -246,7 +244,7 @@ DWORD WINAPI workqueue_monitor_thread(LPVOID _arg)
     }
     if (WaitForSingleObject(arg->wq->worker[i], arg->timeout) == WAIT_TIMEOUT)
     {
-        dbprintlf("Worker thread timed out on %d",i);
+        dbprintlf("Worker thread timed out on %d", i);
         TerminateThread(arg->wq->worker[i], 0);
     }
     CloseHandle(arg->wq->worker[i]);

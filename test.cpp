@@ -24,7 +24,7 @@ void testjob(workqueue_job_io *io)
     int in = *(int *)(io->input);
     *(int *)(io->output) = printf("Received input: %d\n", in);
     fflush(stdout);
-    // sleep(1);
+    sleep(1);
 }
 
 int main(void)
