@@ -1,7 +1,7 @@
 @set OUT_DIR=output
 @set OUT_EXE=test
 @set INCLUDES= /I .\
-@set SOURCES_EXE=workqueue.cpp ^
+@set SOURCES_EXE=workqueue_nt.cpp ^
 test.cpp
 @set LIBS=
 mkdir %OUT_DIR%

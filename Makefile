@@ -4,11 +4,11 @@ EDCFLAGS = -O2 -Wall $(CFLAGS)
 EDCXXFLAGS = -O2 -Wall -std=c++11 $(CXXFLAGS)
 EDLDFLAGS = -lpthread
 
-COBJS = test.o
-CPPOBJS = workqueue.o
+COBJS = test.o \
+		workqueue_posix.o
 
-all: $(COBJS) $(CPPOBJS)
-	$(CC) -o test.out $(COBJS) $(CPPOBJS) $(EDLDFLAGS)
+all: $(COBJS)
+	$(CC) -o test.out $(COBJS) $(EDLDFLAGS)
 
 %.o: %.c
 	$(CC) -o $@ -c $< $(EDCFLAGS)
