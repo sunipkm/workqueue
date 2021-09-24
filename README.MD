@@ -1,4 +1,5 @@
-# Asynchronous Job Queue API for POSIX-compatible and Windows NT
+# Asynchronous Job Queue API 
+## For POSIX-compatible and Windows NT OS
 Allows scheduling jobs on a single or multiprocessor system, with timeout to kill hanged jobs.
 Designed to be cross-platform, using `pthreads` backend for POSIX-compatible systems and native Windows threading API on the NT systems.
 The library is implemented in C for POSIX, and C++ for Windows NT systems.
