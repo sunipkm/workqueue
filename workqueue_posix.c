@@ -32,7 +32,7 @@ static int get_timeout(struct timespec *ts, int timeout_ms)
     }
     if (timeout_ms < 0)
     {
-        return -1;
+        return 0;
     }
     ts->tv_sec += timeout_ms / 1000;
     timeout_ms = timeout_ms % 1000;
@@ -71,6 +71,10 @@ void *workqueue_monitor_thread(void *_arg)
         dbprintlf(FATAL "Could not create worker thread: %d", rc);
         goto exit;
     }
+    if (arg->timeout <= 0) // timeout not allowed
+    {
+        goto joinwait;
+    }
     rc = pthread_cond_timedwait(&wakeup, &wakelock, &ts);
     if (rc == ETIMEDOUT)
     {
@@ -81,6 +85,7 @@ void *workqueue_monitor_thread(void *_arg)
     {
         dbprintlf(FATAL "pthread_cond_timedwait returned %d", rc);
     }
+joinwait:
     rc = pthread_join(arg->q->worker[arg->id], &ret);
     if (rc == ESRCH)
     {

@@ -83,7 +83,7 @@ int InsertWithTimeout(workqueue_t *wq, workqueue_job_t callback, workqueue_job_i
     handoff->wq = wq;
     handoff->jobfcn = callback;
     handoff->io = io;
-    handoff->timeout = timeout_ms >= 0 ? timeout_ms : INFINITE;
+    handoff->timeout = timeout_ms > 0 ? timeout_ms : INFINITE;
     wq->monitor = CreateThread(NULL, 0, workqueue_monitor_thread, handoff, 0, NULL);
     int retval = 0;
     if (wq->monitor == NULL)
